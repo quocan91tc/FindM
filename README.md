@@ -1,2 +1,2 @@
 # FindM
-Python script helps correct the CDS annotation
+Python script helps to correct the starting M position of CDS
