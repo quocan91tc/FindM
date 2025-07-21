@@ -93,26 +93,26 @@ def re_verifyM(
     if cds_pos < 0 or cds_pos >= len(fasta_seq):
         return cds_pos
 
-    # include the first translated codon
+    # include the first translated aa
     sub_seq = fasta_seq[:cds_pos+3]
     # identify the translation framework: +0,+1 or +2 depend on the length of sequence
     framework = len(sub_seq)%3
+    # translate DNA to AA
     sub_seq = str(Seq(sub_seq[framework:]).translate())
     
     # find the closest codon stop
-    M_pos = -1 # no found M position by default
-    inversed_seq = str(sub_seq)[::-1]
-    for i in range(len(inversed_seq)):
-        # store the position whenever another M passed by
-        if inversed_seq[i].upper() == "M":
-            M_pos = i
-        # stop immediately when reach the first codon stop
-        if inversed_seq[i] == '*':
-            break
-    if M_pos > 0:
-        # reverse the position then convert back to pb mesurement
-        M_pos = (len(inversed_seq) - M_pos)*3 + framework
-        
+    # consider the closest * near the cds start position so inverse make the search run faster
+    inversed_seq = sub_seq[::-1]
+    match = re.search(r'\*', inversed_seq)
+    # the first codon stop encoutered
+    stop_pos = match.start() if math else len(sub_seq)
+
+    # find the closest aa M to the first * by slicing again the inversed aa sequence
+    tmp_seq = inversed_seq[:stop_pos]
+    # find the first M encoutered
+    M_pos = tmp_seq.find('M')
+    if M_pos >= 0:
+        return (len(inversed_seq) - M_pos - 1)*3 + framework
 
     return int(M_pos)
 
