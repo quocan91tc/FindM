@@ -1,8 +1,5 @@
 # FindM
 
-Python script helps to correct the starting M position of CDS. Tested on Apple Macbook Pro M1 Pro 10-core CPU with Emihu1 dataset from JGI which combines ~228k genes, it takes about more-or-less 2 hours to finish the job.
-
-
 ## Table of content
 1. [Overview](#motivation)
 2. [Requirements](#req)
@@ -11,7 +8,7 @@ Python script helps to correct the starting M position of CDS. Tested on Apple M
 
 
 ### Overview<a name="motivation"></a>
-This simple Python script here whill help you, the biologician to correct the M position of CDS in the protein sequence from the JGI Database. I developped this tool for my project of studying the targetting plastidic proteins of Haptophyta. Since many genes in the database were annotated errously, the prediction of Signal Peptide is disappointing. Thus, I have to clean up the data for better prediction performance. I've tested this script on my Apple Macbook Pro M1 Pro 10-core CPU with Emihu1 dataset from JGI which is combined ~228k genes and it takes about more-or-less 2 hours to finish the task.
+This simple Python script here help to correct the M position of CDS in the protein sequence from the JGI Database. I developped this tool for my project of studying the targetting plastidic proteins of Haptophyta. Since many genes in the database were annotated errously bu computer, the prediction of Signal Peptide is consequenctly affected. Thus, I have to clean up the data for better prediction performance then here we are. I've tested this script on my Apple Macbook Pro M1 Pro 10-core CPU with Emihu1 dataset from JGI which is combined ~228k genes and it takes about more-or-less 2 hours to finish the task.
 
 ### Requirements <a name="req"></a>
 - Python3.9.20
