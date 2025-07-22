@@ -15,9 +15,9 @@ This simple Python script here whill help you, the biologician to correct the M 
 
 ### Requirements <a name="req"></a>
 - Python3.9.20
-- Anaconda [link](https://anaconda.org/anaconda/conda) or PyEnv[link](https://github.com/pyenv/pyenv)
-- Pandas [link](https://github.com/pandas-dev/pandas)
-- Biopython [link](https://github.com/biopython/biopython/tree/master)
+- [Anaconda](https://anaconda.org/anaconda/conda) or [PyEnv](https://github.com/pyenv/pyenv)
+- [Pandas](https://github.com/pandas-dev/pandas)
+- [Biopython](https://github.com/biopython/biopython/tree/master)
 
 
 ### Instructions <a name="instruction"></a>:
