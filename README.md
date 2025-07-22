@@ -15,9 +15,9 @@ This simple Python script here whill help you, the biologician to correct the M 
 
 ### Requirements <a name="req"></a>
     - Python3.9.20
-    - [Anaconda](https://anaconda.org/anaconda/conda) or [Pyenv](https://github.com/pyenv/pyenv)
-    - [Pandas](https://github.com/pandas-dev/pandas)
-    - [Biopython](https://github.com/biopython/biopython/tree/master)
+    - Anaconda [link](https://anaconda.org/anaconda/conda) or PyEnv[link](https://github.com/pyenv/pyenv)
+    - Pandas [link](https://github.com/pandas-dev/pandas)
+    - Biopython [link](https://github.com/biopython/biopython/tree/master)
 
 
 ### Instructions <a name="instruction"></a>:
@@ -46,7 +46,7 @@ This simple Python script here whill help you, the biologician to correct the M 
                 pyenv activate myenv
               ```
         - Then once you finish the task and want to quit, use: `conda deactivate` or `pyenv deactivate`
-    - To install the requirements    
+    - To install the other requirements    
         `pip install -r requirements.txt`
 
 2. To run perfectly the script, you must have the species_all_genes.gff and species_masked_scaffolds.fasta files. They can be downloaded from JGI [here](https://genome.jgi.doe.gov/portal/pages/dynamicOrganismDownload.jsf?organism=haptophyta).
