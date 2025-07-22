@@ -31,7 +31,7 @@ This simple Python script here whill help you, the biologician to correct the M 
         	- If it's not, then please install `Anaconda` on your computer by clicking the link in the [Requirements](#req) and follow the instructions. Then after having `Anaconda` installed, you should be able to check the version.
       		- Same as `Anaconda`, you can check wether `Pyenv` is installed or not by using:
         	``` pyenv --version```
-   		- You can choose which one suit to you.
+		- You can choose which one suit to you.
       		- Then run these commands to create a virtual environment with `Python3.9.20`. The advantage of using the virtual environment is that you can isolate whatever libraries and Python version installed in this environment to avoid the conflicts with your actual system environment. It's highly recommended to create virtual environment for each project:
         		- Anaconda:
 	              	```
