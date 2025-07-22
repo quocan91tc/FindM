@@ -22,19 +22,19 @@ This simple Python script here whill help you, the biologician to correct the M 
 
 ### Instructions <a name="instruction"></a>:
 
-1. Run the following commands to set up the requirements.
-	- To setup the environment: 
-        	1. To setup, it's required either `Anaconda` (MacOS/Linux/Window compatible) or `Pyenv` (Linux/MacOs compatible).
-        	2. Check if you have already had `Anaconda` installed:
+1. Run the following commands to set up the requirements:
+	- To setup the environment:
+ 		- To setup, it's required either `Anaconda` (MacOS/Linux/Window compatible) or `Pyenv` (Linux/MacOs compatible).
+     		- Check if you have already had `Anaconda` installed:
    			`conda --version`.
-      		3. It should be `conda xx.xx.x`, it shows the version of conda installed.
-        	4. If it's not, then please install `Anaconda` on your computer by clicking the link in the [Requirements](#req) and follow the instructions. Then after having `Anaconda` installed, you should be able to check the version.
-      		5. Same as `Anaconda`, you can check wether `Pyenv` is installed or not by using: 
+      		- It should be `conda xx.xx.x`, it shows the version of conda installed.
+        	- If it's not, then please install `Anaconda` on your computer by clicking the link in the [Requirements](#req) and follow the instructions. Then after having `Anaconda` installed, you should be able to check the version.
+      		- Same as `Anaconda`, you can check wether `Pyenv` is installed or not by using: 
             		```
    				pyenv --version
    			```
-   		6. You can choose which one suit to you.
-      		7. Then run these commands to create a virtual environment with `Python3.9.20`. The advantage of using the virtual environment is that you can isolate whatever libraries and Python version installed in this environment to avoid the conflicts with your actual system environment. It's highly recommended to create virtual environment for each project:
+   		- You can choose which one suit to you.
+      		- Then run these commands to create a virtual environment with `Python3.9.20`. The advantage of using the virtual environment is that you can isolate whatever libraries and Python version installed in this environment to avoid the conflicts with your actual system environment. It's highly recommended to create virtual environment for each project:
             		- Anaconda:
 	              	```
 	                conda create -n findM python=3.9.20 -c conda-forge
@@ -47,7 +47,7 @@ This simple Python script here whill help you, the biologician to correct the M 
 	                pyenv virtualenv 3.9.20 myenv
 	                pyenv activate myenv
 	              ```
-         	8. Then once you finish the task and want to quit, use: `conda deactivate` or `pyenv deactivate`
+         	- Then once you finish the task and want to quit, use: `conda deactivate` or `pyenv deactivate`
     - To install the other requirements
       	``` 	   
         pip install -r requirements.txt
