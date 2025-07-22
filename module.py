@@ -84,43 +84,54 @@ def load_fasta(fasta_path:str = './Emihu1_masked_scaffolds.fasta'):
 
 def re_verifyM(
         fasta_seq: str, 
-        cds_pos: float,
+        cds_start: float,
+        cds_end:float,
         direction:str,
         ) -> int:
     """
     Take an input of fasta acide amine sequence, CDS position from JGI 
-    and re-find the M position in the given sequence
+    and re-find the M position (forward and backward) in the given sequence
     """
-    cds_pos = int(cds_pos)
-    if cds_pos < 0 or cds_pos >= len(fasta_seq):
-        return cds_pos
-
-    # include the first translated aa
-    sub_seq = fasta_seq[:cds_pos+3]
-    # identify the translation framework: +0,+1 or +2 depend on the length of sequence
-    framework = len(sub_seq)%3
-    # translate DNA to AA
-    if direction == "+":
-        sub_seq = str(Seq(sub_seq[framework:]).translate())
-    else:
-        sub_seq = str(Seq(sub_seq[framework:]).reverse_complement().translate())
     
-    # find the closest codon stop
-    # consider the closest * near the cds start position so inverse make the search run faster
-    inversed_seq = sub_seq[::-1]
-    match = re.search(r'\*', inversed_seq)
-    # the first codon stop encoutered
-    stop_pos = match.start() if match else len(sub_seq)
+    cds_start = int(cds_start)
+    if cds_start < 0 or cds_start >= len(fasta_seq) or cds_start > cds_end:
+        return cds_start
 
-    # find the closest aa M to the first * by slicing again the inversed aa sequence
-    tmp_seq = inversed_seq[:stop_pos]
-    # find the first M encoutered
-    # if no M, M_pos = -1
-    M_pos = tmp_seq.find('M')
-    if M_pos >= 0:
-        return (len(inversed_seq) - M_pos - 1)*3 + framework
+    cds_end = int(cds_end)
+    if cds_end < 0 or cds_end >= len(fasta_seq):
+        return cds_start
+    # Forward
+    if direction == "+":
+        # translate DNA to AA
+        # include the first translated aa
+        sub_seq = fasta_seq[:cds_start+3]
+        # identify the translation framework: +0,+1 or +2 depend on the length of sequence
+        framework = len(sub_seq)%3
+        sub_seq = str(Seq(sub_seq[framework:]).translate())
+        # find the closest codon stop
+        # consider the closest * near the cds start position so inverse make the search run faster
+        inversed_seq = sub_seq[::-1]
+        match = re.search(r'\*', inversed_seq)
+        # the first codon stop encoutered
+        stop_pos = match.start() if match else len(sub_seq)
 
-    return int(M_pos)
+        # find the closest aa M to the first * by slicing again the inversed aa sequence
+        tmp_seq = inversed_seq[:stop_pos]
+        # find the first M encoutered
+        M_pos = tmp_seq.find('M')
+        if M_pos >= 0:
+            return (len(inversed_seq) - M_pos - 1)*3 + framework
+    # Backward
+    else:
+        # find the true (furthest) M position by going backward the CDS sequence
+        sub_seq = fasta_seq[cds_start: cds_end+3]
+        sub_seq = str(Seq(sub_seq).reverse_complement().translate())
+        # find the last M encoutered
+        inversed_seq = sub_seq[::-1]
+        M_pos = inversed_seq.find('M')
+        if M_pos >= 0:
+            return (len(inversed_seq) - M_pos - 1)*3 + cds_start
+        return int(M_pos)
 
 
 def find_M(
@@ -130,12 +141,13 @@ def find_M(
 
     results = []
     for scaffold, group_df in df.groupby(['scaffold']):
-        fasta_seq = fasta_dict[scaffold[0]]  # get once
+        fasta_seq = fasta_dict[scaffold[0]]  # get the value
         starts = group_df['start'].astype(int).tolist()
+        ends = group_df['end'].astype(int).tolist()
         directions = group_df['direction2'].tolist()
 
         # Vectorized by list comprehension per group
-        true_M_positions = [re_verifyM(fasta_seq, cds_pos, direction) for (cds_pos, direction) in zip(starts, directions)]
+        true_M_positions = [re_verifyM(fasta_seq, cds_start, cds_end, direction) for (cds_start, cds_end, direction) in zip(starts, ends, directions)]
 
         group_result = group_df.copy()
         group_result['true_M_pos'] = true_M_positions
@@ -150,6 +162,8 @@ def find_M(
             group_result.loc[mask, 'start'] - group_result.loc[mask, 'true_M_pos']
         ).abs()
         results.append(group_result)
+        ####
+        break 
 
     # Concatenate all groups
     result = pd.concat(results, ignore_index=True)
@@ -222,3 +236,4 @@ def get_fastas(df, fasta_dict, out_dir, species, text_width, output_type):
         # writting the unchanged genes
         df_error = group_df[group_df['no_M']]
         writting_fasta(scaffold, df_error, err_dna_path, err_prot_path)
+        break
