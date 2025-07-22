@@ -132,20 +132,19 @@ def re_verifyM(
         return M_pos
     # Backward
     else:
-        # find the true (furthest) M position by going backward the CDS sequence
-        framework = (cds_end - cds_start)%3
-        sub_seq = fasta_seq[cds_start-framework: cds_end]
+        # find the true (closest) M position by going backward the CDS sequence
+        offset = (cds_end - cds_start)%3
+        # print(offset)
+        sub_seq = fasta_seq[cds_start: (cds_end - offset)]
         sub_seq = str(Seq(sub_seq).reverse_complement().translate())
         # print(sub_seq)
-        # find the last M encoutered
-        inversed_seq = sub_seq[::-1]
-        M_pos = inversed_seq.find('M')
+        # find the closest M encoutered from the end of dna sequence
+        M_pos = sub_seq.find('M')
         if M_pos >= 0:
-            M_pos = len(inversed_seq) - M_pos - 1
-            # print(sub_seq[M_pos:])
-            # print(cds_end - M_pos*3)
-            # print(Seq(fasta_seq[cds_start:cds_end-M_pos*3]).reverse_complement().translate())
-            return cds_end - M_pos*3 + framework
+            # print(M_pos)
+            # print(cds_end - (M_pos)*3)
+            # print(Seq(fasta_seq[cds_start:cds_end-(M_pos)*3]).reverse_complement().translate())
+            return cds_start + (M_pos)*3
         return int(M_pos)
 
 
@@ -230,7 +229,7 @@ def get_fastas(df, fasta_dict, out_dir, species, text_width, output_type):
                     for row2 in df_tmp.iloc[:-1].iterrows():
                         seq_dna += fasta_dict[scaffold][row2['start']:row2['end']]
                     # the last part that we modified
-                    seq_dna = fasta_dict[scaffold][int(row['start'])-3:int(row['end'])]
+                    seq_dna = fasta_dict[scaffold][int(row['start']):int(row['end'])]
                 
                 # writting with output conditions
                 if output_type == 'dna':
@@ -243,11 +242,11 @@ def get_fastas(df, fasta_dict, out_dir, species, text_width, output_type):
                 else:
                     f_prot.write(f">jgi | {scaffold} | {row['proteinId']} | {row['name']}\n")
                     is_empty_prot = False
-                    framework = len(seq_dna)%3
+                    offset = len(seq_dna)%3
                     if row['direction2'] == "+":
-                        seq_prot = str(Seq(seq_dna[framework:]).translate())
+                        seq_prot = str(Seq(seq_dna[offset:]).translate())
                     else:
-                        seq_prot = str(Seq(seq_dna[framework:]).reverse_complement().translate())
+                        seq_prot = str(Seq(seq_dna[:-offset]).reverse_complement().translate())
                     wraps_prot = textwrap.wrap(seq_prot, width=text_width)
                     for w in wraps_prot:
                         f_prot.write(w + "\n")
