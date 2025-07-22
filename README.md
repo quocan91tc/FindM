@@ -33,17 +33,17 @@ This simple Python script here whill help you, the biologician to correct the M 
         	``` pyenv --version```
    		- You can choose which one suit to you.
       		- Then run these commands to create a virtual environment with `Python3.9.20`. The advantage of using the virtual environment is that you can isolate whatever libraries and Python version installed in this environment to avoid the conflicts with your actual system environment. It's highly recommended to create virtual environment for each project:
-            		- Anaconda:
+        		- Anaconda:
 	              	```
-		        conda create -n findM python=3.9.20 -c conda-forge
-		        conda activate findM
+			        conda create -n findM python=3.9.20 -c conda-forge
+			        conda activate findM
 	               ```
-            		- Pyenv:
-	              	```
-		        pyenv install 3.9.20
-		        pyenv versions
-		        pyenv virtualenv 3.9.20 myenv
-		        pyenv activate myenv
+           		- Pyenv:
+			```
+			        pyenv install 3.9.20
+			        pyenv versions
+			        pyenv virtualenv 3.9.20 myenv
+			        pyenv activate myenv
 	              	```
          	- Then once you finish the task and want to quit, use: `conda deactivate` or `pyenv deactivate`
     - To install the other requirements
