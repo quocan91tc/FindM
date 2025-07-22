@@ -133,9 +133,9 @@ def re_verifyM(
     # Backward
     else:
         # find the true (furthest) M position by going backward the CDS sequence
-        sub_seq = fasta_seq[cds_start-3: cds_end]
-        framework = len(sub_seq)%3
-        sub_seq = str(Seq(sub_seq[:-framework]).reverse_complement().translate())
+        framework = (cds_end - cds_start)%3
+        sub_seq = fasta_seq[cds_start-framework: cds_end]
+        sub_seq = str(Seq(sub_seq).reverse_complement().translate())
         # print(sub_seq)
         # find the last M encoutered
         inversed_seq = sub_seq[::-1]
