@@ -46,13 +46,17 @@ This simple Python script here whill help you, the biologician to correct the M 
                 pyenv activate myenv
               ```
         - Then once you finish the task and want to quit, use: `conda deactivate` or `pyenv deactivate`
-    - To install the other requirements    
-        `pip install -r requirements.txt`
+    - To install the other requirements
+      	``` 	   
+        pip install -r requirements.txt
+       ```
 
 2. To run perfectly the script, you must have the species_all_genes.gff and species_masked_scaffolds.fasta files. They can be downloaded from JGI [here](https://genome.jgi.doe.gov/portal/pages/dynamicOrganismDownload.jsf?organism=haptophyta).
 
 3. The structure of the command:
-    `python findM.py  -s 'species name' -g 'path/to/file.gff' -f 'path/to/file.fasta' -t 'fasta output type'`
+```
+    `python findM.py  -s 'species name' -g 'path/to/file.gff' -f 'path/to/file.fasta' -t 'fasta output type'
+```
 - The option `-t` that let you choose the format of fasta file that you want to get: DNA sequences `'dna'` or Acide Amine `'protein'` sequences or Both `'both'`. Kindly replace those word right after the -t option. 
 
 ### Licensing, Authors, Acknowledgements<a name="licensing"></a>
