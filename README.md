@@ -4,13 +4,13 @@ Python script helps to correct the starting M position of CDS. Tested on Apple M
 
 
 ## Table of content
-1. [Motivation](#motivation)
+1. [Overview](#motivation)
 2. [Requirements](#req)
 3. [Instruction](#instruction)
 4. [Licensing, Authors, and Acknowledgements](#licensing)
 
 
-## Overview<a name="motivation"></a>
+### Overview<a name="motivation"></a>
 This simple Python script here whill help you, the biologician to correct the M position of CDS in the protein sequence from the JGI Database. I developped this tool for my project of studying the targetting plastidic proteins of Haptophyta. Since many genes in the database were annotated errously, the prediction of Signal Peptide is disappointing. Thus, I have to clean up the data for better prediction performance. I've tested this script on my Apple Macbook Pro M1 Pro 10-core CPU with Emihu1 dataset from JGI which is combined ~228k genes and it takes about more-or-less 2 hours to finish the task.
 
 ### Requirements <a name="req"></a>
