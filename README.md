@@ -55,7 +55,7 @@ This simple Python script here whill help you, the biologician to correct the M 
 
 3. The structure of the command:
 ```
-    `python findM.py  -s 'species name' -g 'path/to/file.gff' -f 'path/to/file.fasta' -t 'fasta output type'
+    python findM.py  -s 'species name' -g 'path/to/file.gff' -f 'path/to/file.fasta' -t 'fasta output type'
 ```
 - The option `-t` that let you choose the format of fasta file that you want to get: DNA sequences `'dna'` or Acide Amine `'protein'` sequences or Both `'both'`. Kindly replace those word right after the -t option. 
 
