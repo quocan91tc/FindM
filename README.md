@@ -37,15 +37,15 @@ This simple Python script here whill help you, the biologician to correct the M 
 	              	```
 			        conda create -n findM python=3.9.20 -c conda-forge
 			        conda activate findM
-	               ```
+	               	```
            		- Pyenv:
 			```
 			        pyenv install 3.9.20
 			        pyenv versions
 			        pyenv virtualenv 3.9.20 myenv
 			        pyenv activate myenv
-	              	```
-         	- Then once you finish the task and want to quit, use: `conda deactivate` or `pyenv deactivate`
+   			```
+     		- Then once you finish the task and want to quit, use: `conda deactivate` or `pyenv deactivate`
     - To install the other requirements
       	``` 	   
         pip install -r requirements.txt
