@@ -45,14 +45,22 @@ def get_coordinates(
     Filtering the first CDS coordinate infomation for each attribute ('Name' by default) group
     from the GFF dataframe 
     """
-    
-    # Group by 'group' and find the first row with a non-null value
-    result = df_gff.groupby(groupby_attr, group_keys=False).apply(
-        lambda group: group.loc[group[group['type'] == 'CDS'].index[0]] if any(group['type'] == 'CDS') else None,
-        include_groups=False
-    )
+    # get the first cds of protein which is translated by 5-3
+    result_53 = df_gff.groupby('name').apply(
+        lambda group: group.loc[
+            (group['type'] == 'CDS') & (group['direction2'] == '+')
+        ].head(1)  # get first match
+    ).reset_index(drop=True)
 
-    return result
+    # get the last cds of protein which is translated by 3-5
+    result_35 = df_gff.groupby('name').apply(
+        lambda group: group.loc[
+            (group['type'] == 'CDS') & (group['direction2'] == '-')
+        ].iloc[-1] if any((group['type'] == 'CDS') & (group['direction2'] == '-')) else None
+    ).dropna().reset_index(drop=True)
+
+    return pd.concat((result_53, result_35))
+
 
 
 def load_fasta(fasta_path:str = './Emihu1_masked_scaffolds.fasta'):
@@ -120,17 +128,23 @@ def re_verifyM(
         # find the first M encoutered
         M_pos = tmp_seq.find('M')
         if M_pos >= 0:
-            return (len(inversed_seq) - M_pos - 1)*3 + framework
+            M_pos = (len(inversed_seq) - M_pos - 1)*3 + framework
+        return M_pos
     # Backward
     else:
         # find the true (furthest) M position by going backward the CDS sequence
-        sub_seq = fasta_seq[cds_start: cds_end+3]
+        sub_seq = fasta_seq[cds_start-3: cds_end]
         sub_seq = str(Seq(sub_seq).reverse_complement().translate())
+        # print(sub_seq)
         # find the last M encoutered
         inversed_seq = sub_seq[::-1]
         M_pos = inversed_seq.find('M')
         if M_pos >= 0:
-            return (len(inversed_seq) - M_pos - 1)*3 + cds_start
+            M_pos = len(inversed_seq) - M_pos - 1
+            # print(sub_seq[M_pos:])
+            # print(cds_end - M_pos*3)
+            # print(Seq(fasta_seq[cds_start:cds_end-M_pos*3]).reverse_complement().translate())
+            return cds_end - M_pos*3
         return int(M_pos)
 
 
@@ -152,18 +166,25 @@ def find_M(
         group_result = group_df.copy()
         group_result['true_M_pos'] = true_M_positions
         group_result['no_M'] = False
-        group_result.loc[group_result['true_M_pos'] < 0, 'no_M'] = True 
+        group_result.loc[group_result['true_M_pos'] == -1, 'no_M'] = True 
 
         # calculate the differences
         group_result['M_pos_diff'] = 0
         # only gene in which has M can calculate the difference
         mask = ~group_result['no_M']
-        group_result.loc[mask, 'M_pos_diff'] = (
-            group_result.loc[mask, 'start'] - group_result.loc[mask, 'true_M_pos']
+        
+        # forward because of direction +
+        mask2 = group_result['direction2'] == '+'
+        group_result.loc[mask & mask2, 'M_pos_diff'] = (
+            group_result.loc[mask & mask2, 'start'] - group_result.loc[mask & mask2, 'true_M_pos']
+        ).abs()
+
+        # backward because of direction -
+        mask3 = group_result['direction2'] == '-'
+        group_result.loc[mask & mask3, 'M_pos_diff'] = (
+            group_result.loc[mask & mask3, 'end'] - group_result.loc[mask & mask3, 'true_M_pos']
         ).abs()
         results.append(group_result)
-        ####
-        break 
 
     # Concatenate all groups
     result = pd.concat(results, ignore_index=True)
@@ -182,34 +203,38 @@ def get_fastas(df, fasta_dict, out_dir, species, text_width, output_type):
     ch_prot_path = os.path.join(out_dir, f'{species}_Changed_prot.fasta') 
     err_prot_path = os.path.join(out_dir, f'{species}_Error_prot.fasta') 
 
-    def writting_fasta(scaffold, df, path_dna, path_prot):
+    def writting_fasta(scaffold, df, path_dna, path_prot, is_backward=False):
         #  boolean flag to remove the empty file
         is_empty_prot = True
         is_empty_dna = True
         with open(path_dna, 'a') as f_dna, open(path_prot, 'a') as f_prot:
-            f_dna.write(f'>{scaffold}\n')
-            f_prot.write(f'>{scaffold}\n')
-
             for row in df.iterrows():
-                seq_dna = fasta_dict[scaffold][row[start]:row[end]]
-                
+                # forward
+                if row['direction2'] == "+":
+                    seq_dna = fasta_dict[scaffold][int(row['start']):int(row['end'])]
+                # backward
+                else:
+                    seq_dna = fasta_dict[scaffold][int(row['start'])-3:int(row['end'])]
                 if output_type == 'dna':
-                    f_dna.write(f">jgi|{row['proteinId']} | {row['name']}\n")
+                    f_dna.write(f">jgi | {scaffold} | {row['proteinId']} | {row['name']}\n")
                     is_empty_dna = False
                     wraps_dna = textwrap.wrap(seq_dna, width=text_width)
                     for w in wraps:
                         f_dna.write(w + "\n")
                 # if user want prot fasta file or bth prot and dna fasta files
                 else:
-                    f_prot.write(f">jgi|{row['proteinId']} | {row['name']}\n")
+                    f_prot.write(f">jgi | {scaffold} | {row['proteinId']} | {row['name']}\n")
                     is_empty_prot = False
-                    seq_prot = str(Seq(seq_dna).translate())
+                    if row['direction2'] == "+":
+                        seq_prot = str(Seq(seq_dna).translate())
+                    else:
+                        seq_prot = str(Seq(seq_dna).reverse_complement().translate())
                     wraps_prot = textwrap.wrap(seq_prot, width=text_width)
                     for w in wraps_prot:
                         f_prot.write(w + "\n")
 
                     if output_type == 'both':
-                        f_dna.write(f">jgi|{row['proteinId']} | {row['name']}\n")
+                        f_dna.write(f">jgi | {scaffold} | {row['proteinId']} | {row['name']}\n")
                         is_empty_dna = False
                         wraps_dna = textwrap.wrap(seq_dna, width=text_width)
                         for w in wraps:
@@ -230,10 +255,13 @@ def get_fastas(df, fasta_dict, out_dir, species, text_width, output_type):
         writting_fasta(scaffold, df_unchanged, unch_dna_path, unch_prot_path)
 
         # writting the changed genes
-        df_changed = group_df[group_df['M_pos_diff'] > 0]
+        df_changed = group_df[group_df['M_pos_diff'] != 0]
+        # forward
+        df_changed.loc[df_changed['direction2'] == "+", 'start'] = df_changed.loc[df_changed['direction2'] == "+", 'true_M_pos']
+        # backward
+        df_changed.loc[df_changed['direction2'] == "-", 'end'] = df_changed.loc[df_changed['direction2'] == "-", 'true_M_pos']
         writting_fasta(scaffold, df_changed, ch_dna_path, ch_prot_path)
 
-        # writting the unchanged genes
+        # writting the error genes
         df_error = group_df[group_df['no_M']]
         writting_fasta(scaffold, df_error, err_dna_path, err_prot_path)
-        break
