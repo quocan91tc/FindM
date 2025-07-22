@@ -2,6 +2,7 @@ import os
 import pandas as pd
 from Bio.Seq import Seq
 import textwrap
+import re
 
 
 def load_gff(file_path:str ='./Emihu1_all_genes.gff', 
@@ -83,7 +84,8 @@ def load_fasta(fasta_path:str = './Emihu1_masked_scaffolds.fasta'):
 
 def re_verifyM(
         fasta_seq: str, 
-        cds_pos: float
+        cds_pos: float,
+        direction:str,
         ) -> int:
     """
     Take an input of fasta acide amine sequence, CDS position from JGI 
@@ -98,18 +100,22 @@ def re_verifyM(
     # identify the translation framework: +0,+1 or +2 depend on the length of sequence
     framework = len(sub_seq)%3
     # translate DNA to AA
-    sub_seq = str(Seq(sub_seq[framework:]).translate())
+    if direction == "+":
+        sub_seq = str(Seq(sub_seq[framework:]).translate())
+    else:
+        sub_seq = str(Seq(sub_seq[framework:]).reverse_complement().translate())
     
     # find the closest codon stop
     # consider the closest * near the cds start position so inverse make the search run faster
     inversed_seq = sub_seq[::-1]
     match = re.search(r'\*', inversed_seq)
     # the first codon stop encoutered
-    stop_pos = match.start() if math else len(sub_seq)
+    stop_pos = match.start() if match else len(sub_seq)
 
     # find the closest aa M to the first * by slicing again the inversed aa sequence
     tmp_seq = inversed_seq[:stop_pos]
     # find the first M encoutered
+    # if no M, M_pos = -1
     M_pos = tmp_seq.find('M')
     if M_pos >= 0:
         return (len(inversed_seq) - M_pos - 1)*3 + framework
@@ -121,14 +127,15 @@ def find_M(
     df:pd.DataFrame,
     fasta_dict:dict
     ) -> pd.DataFrame:
-    
+
     results = []
     for scaffold, group_df in df.groupby(['scaffold']):
         fasta_seq = fasta_dict[scaffold[0]]  # get once
         starts = group_df['start'].astype(int).tolist()
+        directions = group_df['direction2'].tolist()
 
         # Vectorized by list comprehension per group
-        true_M_positions = [re_verifyM(fasta_seq, pos) for pos in starts]
+        true_M_positions = [re_verifyM(fasta_seq, cds_pos, direction) for (cds_pos, direction) in zip(starts, directions)]
 
         group_result = group_df.copy()
         group_result['true_M_pos'] = true_M_positions
@@ -138,11 +145,16 @@ def find_M(
         # calculate the differences
         group_result['M_pos_diff'] = 0
         # only gene in which has M can calculate the difference
-        group_result.loc[~group_result['no_M'], 'M_pos_diff'] = (group_result['start'] - group_result['true_M_pos']).abs()
+        mask = ~group_result['no_M']
+        group_result.loc[mask, 'M_pos_diff'] = (
+            group_result.loc[mask, 'start'] - group_result.loc[mask, 'true_M_pos']
+        ).abs()
         results.append(group_result)
+        ####
+        break 
 
     # Concatenate all groups
-    return pd.concat(results, ignore_index=True)
+    result = pd.concat(results, ignore_index=True)
 
 
 def get_fastas(df, fasta_dict, out_dir, species, text_width, output_type):
@@ -201,6 +213,7 @@ def get_fastas(df, fasta_dict, out_dir, species, text_width, output_type):
 
     for scaffold, group_df in df.groupby(['scaffold']):
         # writting the unchanged genes
+        scaffold = scaffold[0]
         df_unchanged = group_df[(group_df['M_pos_diff'] == 0) & (~group_df['no_M'])]
         writting_fasta(scaffold, df_unchanged, unch_dna_path, unch_prot_path)
 
@@ -211,3 +224,4 @@ def get_fastas(df, fasta_dict, out_dir, species, text_width, output_type):
         # writting the unchanged genes
         df_error = group_df[group_df['no_M']]
         writting_fasta(scaffold, df_error, err_dna_path, err_prot_path)
+        break
