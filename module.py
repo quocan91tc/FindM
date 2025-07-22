@@ -204,18 +204,35 @@ def get_fastas(df, fasta_dict, out_dir, species, text_width, output_type):
     ch_prot_path = os.path.join(out_dir, f'{species}_Changed_prot.fasta') 
     err_prot_path = os.path.join(out_dir, f'{species}_Error_prot.fasta') 
 
-    def writting_fasta(scaffold, df, path_dna, path_prot, is_backward=False):
+    def writting_fasta(scaffold, df_cleaned, df_gff, path_dna, path_prot, is_backward=False):
         #  boolean flag to remove the empty file
         is_empty_prot = True
         is_empty_dna = True
         with open(path_dna, 'a') as f_dna, open(path_prot, 'a') as f_prot:
-            for row in df.iterrows():
+            for row in df_cleaned.iterrows():
+                # get the full data of that model name
+                df_by_name = df_gff.loc[df_gff['name'] == row['name']]
+                # get the first translated CDS corrected
                 # forward
                 if row['direction2'] == "+":
+                    # the first CDS that we modified
                     seq_dna = fasta_dict[scaffold][int(row['start']):int(row['end'])]
+                    # sorting CDS by start true_M_positions
+                    df_by_name = df_by_name.sort_values(by='start', ascending=True)
+                    # get the rest part
+                    for row2 in df_tmp.iloc[1:].iterrows():
+                        seq_dna += fasta_dict[scaffold][row2['start']:row2['end']]
                 # backward
                 else:
+                    # sorting CDS by start true_M_positions
+                    df_by_name = df_by_name.sort_values(by='start', ascending=True)
+                    # get the first part of sequence
+                    for row2 in df_tmp.iloc[:-1].iterrows():
+                        seq_dna += fasta_dict[scaffold][row2['start']:row2['end']]
+                    # the last part that we modified
                     seq_dna = fasta_dict[scaffold][int(row['start'])-3:int(row['end'])]
+                
+                # writting with output conditions
                 if output_type == 'dna':
                     f_dna.write(f">jgi | {scaffold} | {row['proteinId']} | {row['name']}\n")
                     is_empty_dna = False
@@ -226,14 +243,14 @@ def get_fastas(df, fasta_dict, out_dir, species, text_width, output_type):
                 else:
                     f_prot.write(f">jgi | {scaffold} | {row['proteinId']} | {row['name']}\n")
                     is_empty_prot = False
+                    framework = len(seq_dna)%3
                     if row['direction2'] == "+":
-                        seq_prot = str(Seq(seq_dna).translate())
+                        seq_prot = str(Seq(seq_dna[framework:]).translate())
                     else:
-                        seq_prot = str(Seq(seq_dna).reverse_complement().translate())
+                        seq_prot = str(Seq(seq_dna[framework:]).reverse_complement().translate())
                     wraps_prot = textwrap.wrap(seq_prot, width=text_width)
                     for w in wraps_prot:
                         f_prot.write(w + "\n")
-
                     if output_type == 'both':
                         f_dna.write(f">jgi | {scaffold} | {row['proteinId']} | {row['name']}\n")
                         is_empty_dna = False
