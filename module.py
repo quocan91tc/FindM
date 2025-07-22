@@ -150,8 +150,6 @@ def find_M(
             group_result.loc[mask, 'start'] - group_result.loc[mask, 'true_M_pos']
         ).abs()
         results.append(group_result)
-        ####
-        break 
 
     # Concatenate all groups
     result = pd.concat(results, ignore_index=True)
@@ -224,4 +222,3 @@ def get_fastas(df, fasta_dict, out_dir, species, text_width, output_type):
         # writting the unchanged genes
         df_error = group_df[group_df['no_M']]
         writting_fasta(scaffold, df_error, err_dna_path, err_prot_path)
-        break
