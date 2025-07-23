@@ -210,30 +210,27 @@ def get_fastas(df, fasta_dict, out_dir, species, text_width, output_type):
         prev_name = ''
         count = 1
         with open(path_dna, 'a') as f_dna, open(path_prot, 'a') as f_prot:
-            for idx, row in df_cleaned.iterrows():
+            for idx1, row in df_cleaned.iterrows():
                 if prev_name != row['name']:
                     count = 1
                 else:
                     count += 1
                 prev_name = row['name']
-                # get the full data of that model name
-                df_by_name = df_gff.loc[(df_gff['name'] == row['name']) & (df_gff['type'] == 'CDS')]
-                # get the first translated CDS corrected
+                # print(row)
+                # get the full CDS data of that model name
+                df_cds = df_gff.loc[(df_gff['name'] == row['name']) & (df_gff['type'] == 'CDS')]
+                df_cds = df_cds.sort_values(by='start', ascending=True)
                 # forward
                 if row['direction2'] == "+":
                     # the first CDS that we modified
                     seq_dna = fasta_dict[scaffold][int(row['start']):int(row['end'])]
-                    # sorting CDS by start true_M_positions
-                    df_by_name = df_by_name.sort_values(by='start', ascending=True)
                     # get the rest part
-                    for row2 in df_tmp.iloc[1:].iterrows():
+                    for idx2, row2 in df_cds.iloc[1:].iterrows():
                         seq_dna += fasta_dict[scaffold][row2['start']:row2['end']]
                 # backward
                 else:
-                    # sorting CDS by start true_M_positions
-                    df_by_name = df_by_name.sort_values(by='start', ascending=True)
                     # get the first part of sequence
-                    for row2 in df_tmp.iloc[:-1].iterrows():
+                    for idx2, row2 in df_cds.iloc[:-1].iterrows():
                         seq_dna += fasta_dict[scaffold][row2['start']:row2['end']]
                     # the last part that we modified
                     seq_dna = fasta_dict[scaffold][int(row['start']):int(row['end'])]
@@ -244,7 +241,7 @@ def get_fastas(df, fasta_dict, out_dir, species, text_width, output_type):
                         f_dna.write(f">jgi | {scaffold} | {row['proteinId']} | {row['name']}\n")
                     is_empty_dna = False
                     wraps_dna = textwrap.wrap(seq_dna, width=text_width)
-                    for w in wraps:
+                    for w in wraps_dna:
                         f_dna.write(w + "\n")
                 # if user want prot fasta file or bth prot and dna fasta files
                 else:
@@ -263,7 +260,7 @@ def get_fastas(df, fasta_dict, out_dir, species, text_width, output_type):
                         f_dna.write(f">jgi | {scaffold} | {row['proteinId']} | {row['name']}\n")
                         is_empty_dna = False
                         wraps_dna = textwrap.wrap(seq_dna, width=text_width)
-                        for w in wraps:
+                        for w in wraps_dna:
                             f_dna.write(w + "\n")
 
         f_dna.close()
