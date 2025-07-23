@@ -207,10 +207,17 @@ def get_fastas(df, fasta_dict, out_dir, species, text_width, output_type):
         #  boolean flag to remove the empty file
         is_empty_prot = True
         is_empty_dna = True
+        prev_name = ''
+        count = 1
         with open(path_dna, 'a') as f_dna, open(path_prot, 'a') as f_prot:
-            for row in df_cleaned.iterrows():
+            for idx, row in df_cleaned.iterrows():
+                if prev_name != row['name']:
+                    count = 1
+                else:
+                    count += 1
+                prev_name = row['name']
                 # get the full data of that model name
-                df_by_name = df_gff.loc[df_gff['name'] == row['name']]
+                df_by_name = df_gff.loc[(df_gff['name'] == row['name']) & (df_gff['type'] == 'CDS')]
                 # get the first translated CDS corrected
                 # forward
                 if row['direction2'] == "+":
@@ -233,14 +240,16 @@ def get_fastas(df, fasta_dict, out_dir, species, text_width, output_type):
                 
                 # writting with output conditions
                 if output_type == 'dna':
-                    f_dna.write(f">jgi | {scaffold} | {row['proteinId']} | {row['name']}\n")
+                    if count == 1: # only print at the first time
+                        f_dna.write(f">jgi | {scaffold} | {row['proteinId']} | {row['name']}\n")
                     is_empty_dna = False
                     wraps_dna = textwrap.wrap(seq_dna, width=text_width)
                     for w in wraps:
                         f_dna.write(w + "\n")
                 # if user want prot fasta file or bth prot and dna fasta files
                 else:
-                    f_prot.write(f">jgi | {scaffold} | {row['proteinId']} | {row['name']}\n")
+                    if count == 1: # only print at the first time
+                        f_prot.write(f">jgi | {scaffold} | {row['proteinId']} | {row['name']}\n")
                     is_empty_prot = False
                     offset = len(seq_dna)%3
                     if row['direction2'] == "+":
