@@ -8,7 +8,7 @@
 
 
 ### Overview<a name="motivation"></a>
-This simple Python script here help to correct the M position of CDS in the translated protein sequence in both 2 directions (5-3 and 3-5) from the JGI Database. Then, the tool will give you 3 fasta files which are the defective proteins (error), the codon start position corrected ones (changed) and the unchanged ones. Furthermore, this tool lets you choose free the format output fasta files that you want wether DNA or Amino Acide. 
+This simple Python script here help to correct the M position of CDS in the translated protein sequence in both 2 directions (5-3 and 3-5) from the JGI Database. Then, the tool will give you a csv file containing the M position information of the first CDS of each gene and 3 fasta files which are the defective proteins (error), the codon start position corrected ones (changed) and the unchanged ones. Furthermore, this tool lets you choose free the format output fasta files that you want wether DNA or Amino Acide. 
 In fact, I developped this tool for my project of studying the targetting plastidic proteins of Haptophyta. Since many genes in the database were annotated errously bu computer, the prediction of Signal Peptide is consequenctly affected. Thus, I have to clean up the data for better prediction performance then here we are. I've tested this script on my Apple Macbook Pro M1 Pro 10-core CPU with Emihu1 dataset from JGI which is combined ~228k genes and it takes about more-or-less 2 hours to finish the task.
 
 ### Requirements <a name="req"></a>
