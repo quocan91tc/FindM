@@ -229,6 +229,7 @@ def get_fastas(df, fasta_dict, out_dir, species, text_width, output_type):
                         seq_dna += fasta_dict[scaffold][row2['start']:row2['end']]
                 # backward
                 else:
+                    seq_dna = ''
                     # get the first part of sequence
                     for idx2, row2 in df_cds.iloc[:-1].iterrows():
                         seq_dna += fasta_dict[scaffold][row2['start']:row2['end']]
