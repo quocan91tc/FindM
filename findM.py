@@ -41,7 +41,7 @@ if __name__ == "__main__":
     df_coordinates = get_coordinates(df_gff=df_gff, groupby_attr=GROUPBY_ATTR)
     df_corrected = find_M(df=df_coordinates, fasta_dict=fasta_dict)  
 
-    df_corrected.to_csv('df_corrected.csv')
+    df_corrected.to_csv(f'{args.species}_corrected.csv')
     # export to new gff
     df_corrected.to_csv(os.path.join(args.output, f'{args.species}_all_gene_corrected.gff'), sep='\t', header=False, index=False)
     # export to new fasta
