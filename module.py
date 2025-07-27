@@ -90,6 +90,58 @@ def load_fasta(fasta_path:str = './Emihu1_masked_scaffolds.fasta'):
     return ret_dict
 
 
+# def re_verifyM(
+#         fasta_seq: str, 
+#         cds_start: float,
+#         cds_end:float,
+#         direction:str,
+#         ) -> int:
+#     """
+#     Take an input of fasta acide amine sequence, CDS position from JGI 
+#     and re-find the M position (forward and backward) in the given sequence
+#     """
+    
+#     cds_start = int(cds_start)
+#     if cds_start < 0 or cds_start >= len(fasta_seq) or cds_start > cds_end:
+#         return cds_start
+
+#     cds_end = int(cds_end)
+#     if cds_end < 0 or cds_end >= len(fasta_seq):
+#         return cds_start
+#     # Forward
+#     if direction == "+":
+#         # translate DNA to AA
+#         # include the first translated aa
+#         sub_seq = fasta_seq[:cds_start+3]
+#         # identify the translation framework: +0,+1 or +2 depend on the length of sequence
+#         framework = len(sub_seq)%3
+#         sub_seq = str(Seq(sub_seq[framework:]).translate())
+#         # find the closest codon stop
+#         # consider the closest * near the cds start position so inverse make the search run faster
+#         inversed_seq = sub_seq[::-1]
+#         match = re.search(r'\*', inversed_seq)
+#         # the first codon stop encoutered
+#         stop_pos = match.start() if match else len(sub_seq)
+
+#         # find the closest aa M to the first * by slicing again the inversed aa sequence
+#         tmp_seq = inversed_seq[:stop_pos]
+#         # find the first M encoutered
+#         M_pos = tmp_seq.find('M')
+#         if M_pos >= 0:
+#             M_pos = (len(inversed_seq) - M_pos - 1)*3 + framework
+#         return M_pos
+#     # Backward
+#     else:
+#         # find the true (closest) M position by going backward the CDS sequence
+#         offset = (cds_end - cds_start)%3
+#         sub_seq = fasta_seq[cds_start: (cds_end - offset)]
+#         sub_seq = str(Seq(sub_seq).reverse_complement().translate())
+#         # find the closest M encoutered from the end of dna sequence
+#         M_pos = sub_seq.find('M')
+#         if M_pos >= 0:
+#             return cds_end - (M_pos)*3
+#         return int(M_pos)
+
 def re_verifyM(
         fasta_seq: str, 
         cds_start: float,
@@ -98,16 +150,13 @@ def re_verifyM(
         ) -> int:
     """
     Take an input of fasta acide amine sequence, CDS position from JGI 
-    and re-find the M position (forward and backward) in the given sequence
+    and re-find the M position in the given sequence
     """
-    
     cds_start = int(cds_start)
-    if cds_start < 0 or cds_start >= len(fasta_seq) or cds_start > cds_end:
-        return cds_start
-
     cds_end = int(cds_end)
-    if cds_end < 0 or cds_end >= len(fasta_seq):
-        return cds_start
+    if cds_start < 0 or cds_start >= len(fasta_seq) or cds_start > cds_end or cds_end < 0 or cds_end >= len(fasta_seq):
+        return -1
+
     # Forward
     if direction == "+":
         # translate DNA to AA
@@ -134,19 +183,13 @@ def re_verifyM(
     else:
         # find the true (closest) M position by going backward the CDS sequence
         offset = (cds_end - cds_start)%3
-        # print(offset)
-        sub_seq = fasta_seq[cds_start: (cds_end - offset)]
+        sub_seq = fasta_seq[(cds_start-offset) : cds_end]
         sub_seq = str(Seq(sub_seq).reverse_complement().translate())
-        # print(sub_seq)
         # find the closest M encoutered from the end of dna sequence
         M_pos = sub_seq.find('M')
         if M_pos >= 0:
-            # print(M_pos)
-            # print(cds_end - (M_pos)*3)
-            # print(Seq(fasta_seq[cds_start:cds_end-(M_pos)*3]).reverse_complement().translate())
-            return cds_start + (M_pos)*3
+            return cds_end - (M_pos)*3
         return int(M_pos)
-
 
 def find_M(
     df:pd.DataFrame,
