@@ -266,18 +266,18 @@ def get_fastas(df, fasta_dict, out_dir, species, text_width, output_type):
                 # forward
                 if row['direction2'] == "+":
                     # the first CDS that we modified
-                    seq_dna = fasta_dict[scaffold][int(row['start']):int(row['end'])]
+                    seq_dna = fasta_dict[scaffold][int(row['start']-1):int(row['end'])]
                     # get the rest part
                     for idx2, row2 in df_cds.iloc[1:].iterrows():
-                        seq_dna += fasta_dict[scaffold][row2['start']:row2['end']]
+                        seq_dna += fasta_dict[scaffold][row2['start']-1:row2['end']]
                 # backward
                 else:
                     seq_dna = ''
                     # get the first part of sequence
                     for idx2, row2 in df_cds.iloc[:-1].iterrows():
-                        seq_dna += fasta_dict[scaffold][row2['start']:row2['end']]
+                        seq_dna += fasta_dict[scaffold][row2['start']-1:row2['end']]
                     # the last part that we modified
-                    seq_dna = fasta_dict[scaffold][int(row['start']):int(row['end'])]
+                    seq_dna = fasta_dict[scaffold][int(row['start']-1):int(row['end'])]
                 
                 # writting with output conditions
                 if output_type == 'dna':
@@ -293,10 +293,18 @@ def get_fastas(df, fasta_dict, out_dir, species, text_width, output_type):
                         f_prot.write(f">jgi | {scaffold} | {row['proteinId']} | {row['name']}\n")
                     is_empty_prot = False
                     offset = len(seq_dna)%3
+                    # forward
                     if row['direction2'] == "+":
-                        seq_prot = str(Seq(seq_dna[offset:]).translate())
+                        if offset > 0:
+                            seq_prot = str(Seq(seq_dna[:-offset]).translate())
+                        else:
+                            seq_prot = str(Seq(seq_dna).translate())
+                    # backward
                     else:
-                        seq_prot = str(Seq(seq_dna[:-offset]).reverse_complement().translate())
+                        if offset > 0:
+                            seq_prot = str(Seq(seq_dna[offset:]).reverse_complement().translate())
+                        else:
+                            seq_prot = str(Seq(seq_dna).reverse_complement().translate())
                     wraps_prot = textwrap.wrap(seq_prot, width=text_width)
                     for w in wraps_prot:
                         f_prot.write(w + "\n")
