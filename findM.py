@@ -2,6 +2,7 @@ import pandas as pd
 import os
 import argparse
 from module import *
+import shutil
 
 
 CURR_DIR = os.getcwd()
@@ -19,7 +20,7 @@ if __name__ == "__main__":
     parser.add_argument('--species', '-s', type=str, required=True, help="Species name")
     parser.add_argument('--fasta', '-f', type=str, required=True, help="Path of the input fasta file")
     parser.add_argument('--outtype', '-t', choices=['protein', 'dna', 'both'], default='prot', help="Format of output fasta files")
-    parser.add_argument('--output', '-o', type=str, default=CURR_DIR, help="Saving directory (current directory by default)")
+    parser.add_argument('--outdir', '-o', type=str, default=CURR_DIR, help="Saving directory (current directory by default)")
 
     # Parse the arguments
     args = parser.parse_args()
@@ -34,17 +35,52 @@ if __name__ == "__main__":
     # print(f"Input file: {args.input}")
     # print(f"Output file: {args.output}")
     
+    # df_combined = pd.read_csv("df_combined.csv") 
+    # df_gff = pd.read_csv("df_gff.csv")    
+
+    # with open("fasta_dict.json", "r") as f:
+    #     fasta_dict = json.load(f)
+
+    print("=====LOADING GFF DATATABLE=======")
     df_gff = load_gff(file_path=args.gff, columns=COLUMNS)
+    print("=====> DONE LOADING GFF DATATABLE")
+
+    print("=====LOADING DNA FASTA FILE=======")
     fasta_dict = load_fasta(fasta_path=args.fasta)
+    print("=====>DONE LOADING DNA FASTA FILE=======")
 
     # print(df)
+    print("=====EXTRACTING CDS COORDINATES=======")
     df_coordinates = get_coordinates(df_gff=df_gff, groupby_attr=GROUPBY_ATTR)
-    df_corrected = find_M(df=df_coordinates, fasta_dict=fasta_dict)  
+    print("=====>DONE EXTRACTING CDS COORDINATES=======")
 
-    df_corrected.to_csv(f'{args.species}_corrected.csv')
+    print("=====FINDING THE TRUTH M POSITION=======")
+    # df_combined = find_M(df=df_coordinates, fasta_dict=fasta_dict)  
+    df_combined = findM_parallel(df=df_coordinates, fasta_dict=fasta_dict)  
+    print("=====>DONE FINDING THE TRUTH M POSITION=======")
+
+    print("=====EXPORTING TO CSV=======")
+    df_combined.to_csv(f'{args.species}_corrected.csv')
     # export to new gff
-    df_corrected.to_csv(os.path.join(args.output, f'{args.species}_all_gene_corrected.gff'), sep='\t', header=False, index=False)
-    # export to new fasta
-    get_fastas(df=df_corrected, fasta_dict=fasta_dict, out_dir=args.output, species=args.species, text_width=TEXT_WIDTH, output_type=args.outtype)
-    
-    del df_gff, fasta_dict, df_coordinates, df_corrected
+    df_combined.to_csv(os.path.join(args.outdir, f'{args.species}_all_gene_corrected.gff'), sep='\t', header=False, index=False)
+    print("=====>DONE EXPORT TO CSV=======")
+
+    print("=====WRITTING FASTA FILES=======")
+    # temporal directory for processing
+    process_dir = os.path.join(args.outdir, 'processed_fasta')
+    os.makedirs(process_dir, exist_ok=True)
+    # writting out the fasta files
+    writting_parallel(
+        species=args.species,
+        out_dir=args.outdir,
+        processed_dir=process_dir, 
+        df_combined=df_combined, 
+        df_gff=df_gff,
+        fasta_dict=fasta_dict, 
+        outtype=args.outtype, 
+        text_width=TEXT_WIDTH)
+    # delete processed redundancies
+    shutil.rmtree(process_dir)
+    print("=====>DONE WRITTING FASTA FILES=======")
+
+    del df_gff, fasta_dict, df_coordinates, df_combined
