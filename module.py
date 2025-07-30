@@ -96,6 +96,16 @@ def load_fasta(fasta_path:str = './Emihu1_masked_scaffolds.fasta'):
     return ret_dict
 
 
+def find_firstM(seq):
+    posM = -1
+    for i in range(len(seq)):
+        if seq[i] == '*':
+            return posM
+        if seq[i] == 'M':
+            posM = i
+    return posM
+
+
 def re_verifyM(
         fasta_seq: str, 
         cds_start: float,
@@ -122,14 +132,7 @@ def re_verifyM(
         # find the closest codon stop
         # consider the closest * near the cds start position so inverse make the search run faster
         inversed_seq = sub_seq[::-1]
-        match = re.search(r'\*', inversed_seq)
-        # the first codon stop encoutered
-        stop_pos = match.start() if match else len(sub_seq)
-
-        # find the closest aa M to the first * by slicing again the inversed aa sequence
-        tmp_seq = inversed_seq[:stop_pos]
-        # find the first M encoutered
-        M_pos = tmp_seq.find('M')
+        M_pos = find_firstM(inversed_seq)
         if M_pos >= 0:
             M_pos = (len(inversed_seq) - M_pos - 1)*3 + framework
         return M_pos
@@ -147,6 +150,53 @@ def re_verifyM(
         if M_pos >= 0:
             return cds_end - (M_pos)*3
         return int(M_pos)
+    
+    
+def re_verifyM_v2(
+        fasta_seq: str, 
+        cds_start: float,
+        cds_end:float,
+        direction:str,
+        ) -> int:
+    """
+    Take an input of fasta acide amine sequence, CDS position from JGI 
+    and re-find the M position in the given sequence
+    """
+    
+def re_verifyM_v2(
+        fasta_subseq: str, 
+        cds_start: float,
+        cds_end:float,
+        direction:str,
+        ) -> int:
+    """
+    Take an input of fasta acide amine sequence, CDS position from JGI 
+    and re-find the M position in the given sequence
+    """
+    
+    cds_start = int(cds_start)
+    cds_end = int(cds_end)
+    if cds_start < 0 or cds_start >= len(fasta_subseq) or cds_start > cds_end or cds_end < 0 or cds_end >= len(fasta_subseq):
+        return -1
+    
+    if direction == '+':
+        sub_seq = fasta_subseq[:cds_start+3]
+        offset = len(sub_seq) % 3
+        sub_seq = str(Seq(sub_seq[offset:]).translate()) if offset > 0 else str(Seq(sub_seq).translate())
+        inversed_seq = sub_seq[::-1]    
+        M_pos = find_firstM(inversed_seq)
+        if M_pos >= 0:
+            M_pos = (len(inversed_seq) - M_pos - 1)*3 + offset
+    else:
+        sub_seq = fasta_subseq[cds_end-3:]
+        offset = len(sub_seq) % 3
+        sub_seq = str(Seq(sub_seq[:-offset]).reverse_complement().translate()) if offset > 0 else str(Seq(sub_seq).reverse_complement().translate())
+        inversed_seq = sub_seq[::-1]
+        M_pos = find_firstM(inversed_seq)
+        if M_pos >= 0:
+            M_pos = cds_end + M_pos*3
+
+    return M_pos
 
 
 def find_M(
@@ -312,7 +362,7 @@ def process_one_scaffold(args):
     directions = group_df['direction2'].tolist()
 
     true_M_positions = [
-        re_verifyM(fasta_seq, s, e, d)
+        re_verifyM_v2(fasta_seq, s, e, d)
         for s, e, d in zip(starts, ends, directions)
     ]
 

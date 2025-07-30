@@ -3,6 +3,7 @@ import os
 import argparse
 from module import *
 import shutil
+import time
 
 
 CURR_DIR = os.getcwd()
@@ -11,6 +12,7 @@ GROUPBY_ATTR = 'name'
 TEXT_WIDTH = 80
 
 if __name__ == "__main__":
+    t_start = time.time()
 
     # Create the argument parser
     parser = argparse.ArgumentParser(description="Argument parsing.")
@@ -81,6 +83,8 @@ if __name__ == "__main__":
         text_width=TEXT_WIDTH)
     # delete processed redundancies
     shutil.rmtree(process_dir)
+    # os.rmdir(process_dir)
     print("=====>DONE WRITTING FASTA FILES=======")
+    print('Processed time (s): ', int(time.time() - t_start))
 
     del df_gff, fasta_dict, df_coordinates, df_combined
