@@ -20,7 +20,9 @@ In fact, I developped this tool for my project of studying the targetting plasti
 
 ### Instructions <a name="instruction"></a>:
 
-1. Run the following commands to set up the requirements:
+1. You can just download this repository as ZIP file to local.
+
+2. Run the following commands to set up the requirements:
 	- To setup the environment:
  		- To setup, it's required either `Anaconda` (MacOS/Linux/Window compatible) or `Pyenv` (Linux/MacOs compatible).
      		- Check if you have already had `Anaconda` installed:
@@ -51,9 +53,9 @@ In fact, I developped this tool for my project of studying the targetting plasti
         pip install -r requirements.txt
        ```
 
-2. To run perfectly the script, you must have the species_all_genes.gff and species_masked_scaffolds.fasta files. They can be downloaded from JGI [here](https://genome.jgi.doe.gov/portal/pages/dynamicOrganismDownload.jsf?organism=haptophyta).
+3. To run perfectly the script, you must have the species_all_genes.gff and species_masked_scaffolds.fasta files. They can be downloaded from JGI [here](https://genome.jgi.doe.gov/portal/pages/dynamicOrganismDownload.jsf?organism=haptophyta).
 
-3. The structure of the command:
+4. The structure of the command:
 ```
     python findM.py  -s 'species name' -g 'path/to/file.gff' -f 'path/to/file.fasta' -t 'fasta output type'
 ```
