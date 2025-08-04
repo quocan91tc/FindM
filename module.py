@@ -153,17 +153,6 @@ def re_verifyM(
     
     
 def re_verifyM_v2(
-        fasta_seq: str, 
-        cds_start: float,
-        cds_end:float,
-        direction:str,
-        ) -> int:
-    """
-    Take an input of fasta acide amine sequence, CDS position from JGI 
-    and re-find the M position in the given sequence
-    """
-    
-def re_verifyM_v2(
         fasta_subseq: str, 
         cds_start: float,
         cds_end:float,
