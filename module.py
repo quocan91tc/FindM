@@ -11,8 +11,8 @@ from multiprocessing import Pool, cpu_count
 
 
 
-def load_gff(file_path:str ='./Emihu1_all_genes.gff', 
-             columns:list=['scaffold', 'jgi', 'type', 'start', 'end', 'direction1', 'direction2', 'phase', 'infos']
+def load_gff(file_path:str, 
+             columns:list
              ) -> pd.DataFrame:
     """
     Read table from .GFF file and load in to Pandas.DataFrame table
@@ -43,33 +43,56 @@ def load_gff(file_path:str ='./Emihu1_all_genes.gff',
     return df_gff
 
 
+def load_gff3(file_path:str,
+              columns:list):
+    """
+    Load GFF version 3 file into 2 Pandas dataframes, one for all and another for only CDS 
+    """
+    
+    # Load the GFF file
+    df_gff = pd.read_csv(file_path, sep='\t', comment='#', names=columns, skiprows=2)
+
+    df_gff["ID"] = df_gff["infos"].str.extract(r'ID=([^;]+)')
+    df_gff["Parent"] = df_gff["infos"].str.extract(r'Parent=([^;]+)')
+    if df_gff['infos'].str.contains("Name=").any():
+        df_gff["Name"] = df_gff["infos"].str.extract(r'Name=([^;]+)')
+    
+    # convert CDS position to integer and subtract by 1 because string start from 0 in python
+    df_gff['start'] = df_gff['start'].astype(int) - 1
+    
+    # extract a subdataframe which contains only CDS 
+    cds_df = df_gff.loc[df_gff['feature_type'] == 'CDS']
+    cds_df = cds_df.sort_values(by=['direction', 'scaffold', 'start'], ascending=[True, True, True])
+
+    return df_gff, cds_df
+
+
 def get_coordinates(
         df_gff:pd.DataFrame, 
-        groupby_attr:str ='name'
+        groupby_attr:str
         ) -> pd.DataFrame:
     """
     Filtering the first CDS coordinate infomation for each attribute ('Name' by default) group
     from the GFF dataframe 
     """
-    # get the first cds of protein which is translated by 5-3
-    result_53 = df_gff.groupby('name').apply(
+    # get the first cds of protein which is translated by 5-3 then sort by ascending the start position of CDS
+    result_53 = df_gff.groupby(groupby_attr).apply(
         lambda group: group.loc[
-            (group['type'] == 'CDS') & (group['direction2'] == '+')
+            (group['feature_type'] == 'CDS') & (group['direction'] == '+')
         ].head(1)  # get first match
-    ).reset_index(drop=True)
+    ).reset_index(drop=True).sort_values(by=['scaffold', 'start'], ascending=[True, True])
 
-    # get the last cds of protein which is translated by 3-5
-    result_35 = df_gff.groupby('name').apply(
+    # get the last cds of protein which is translated by 3-5 then sort by descending the end position of CDS
+    result_35 = df_gff.groupby(groupby_attr).apply(
         lambda group: group.loc[
-            (group['type'] == 'CDS') & (group['direction2'] == '-')
-        ].iloc[-1] if any((group['type'] == 'CDS') & (group['direction2'] == '-')) else None
-    ).dropna().reset_index(drop=True)
-
+            (group['feature_type'] == 'CDS') & (group['direction'] == '-')
+        ].iloc[-1] if any((group['feature_type'] == 'CDS') & (group['direction'] == '-')) else None
+    ).dropna().reset_index(drop=True).sort_values(by=['scaffold', 'end'], ascending=[True, False])
+    
     return pd.concat((result_53, result_35))
 
 
-
-def load_fasta(fasta_path:str = './Emihu1_masked_scaffolds.fasta'):
+def load_fasta(fasta_path:str) -> dict:
     """
     Load fasta sequence from file .fasta into a dictionary with (key: scaffold, value: dna sequence)
     """
@@ -82,9 +105,9 @@ def load_fasta(fasta_path:str = './Emihu1_masked_scaffolds.fasta'):
     with open(fasta_path, 'r') as f:
         for line in f.readlines():
             if ">" in line:
-                # translate acide amine sequence to protein before advance
-                if key != '':
-                    ret_dict[key] = ret_dict[key]
+                # # translate acide amine sequence to protein before advance
+                # if key != '':
+                #     ret_dict[key] = ret_dict[key]
                 # save scaffold number as dict key
                 key = line[1:].strip()  # avoid '>'
                 # create a value for storing the sequence
@@ -96,7 +119,7 @@ def load_fasta(fasta_path:str = './Emihu1_masked_scaffolds.fasta'):
     return ret_dict
 
 
-def find_firstM(seq):
+def find_firstM(seq:str) -> int:
     posM = -1
     for i in range(len(seq)):
         if seq[i] == '*':
@@ -198,7 +221,7 @@ def find_M(
         fasta_seq = fasta_dict[scaffold[0]]  # get the value
         starts = group_df['start'].astype(int).tolist()
         ends = group_df['end'].astype(int).tolist()
-        directions = group_df['direction2'].tolist()
+        directions = group_df['direction'].tolist()
 
         # Vectorized by list comprehension per group
         true_M_positions = [re_verifyM(fasta_seq, cds_start, cds_end, direction) for (cds_start, cds_end, direction) in zip(starts, ends, directions)]
@@ -214,13 +237,13 @@ def find_M(
         mask = ~group_result['no_M']
         
         # forward because of direction +
-        mask2 = group_result['direction2'] == '+'
+        mask2 = group_result['direction'] == '+'
         group_result.loc[mask & mask2, 'M_pos_diff'] = (
             group_result.loc[mask & mask2, 'start'] - group_result.loc[mask & mask2, 'true_M_pos']
         ).abs()
 
         # backward because of direction -
-        mask3 = group_result['direction2'] == '-'
+        mask3 = group_result['direction'] == '-'
         group_result.loc[mask & mask3, 'M_pos_diff'] = (
             group_result.loc[mask & mask3, 'end'] - group_result.loc[mask & mask3, 'true_M_pos']
         ).abs()
@@ -258,10 +281,10 @@ def get_fastas(df, fasta_dict, out_dir, species, text_width, output_type):
                 prev_name = row['name']
                 # print(row)
                 # get the full CDS data of that model name
-                df_cds = df_gff.loc[(df_gff['name'] == row['name']) & (df_gff['type'] == 'CDS')]
+                df_cds = df_gff.loc[(df_gff['name'] == row['name']) & (df_gff['feature_type'] == 'CDS')]
                 df_cds = df_cds.sort_values(by='start', ascending=True)
                 # forward
-                if row['direction2'] == "+":
+                if row['direction'] == "+":
                     # the first CDS that we modified
                     seq_dna = fasta_dict[scaffold][int(row['start']-1):int(row['end'])]
                     # get the rest part
@@ -291,7 +314,7 @@ def get_fastas(df, fasta_dict, out_dir, species, text_width, output_type):
                     is_empty_prot = False
                     offset = len(seq_dna)%3
                     # forward
-                    if row['direction2'] == "+":
+                    if row['direction'] == "+":
                         if offset > 0:
                             seq_prot = str(Seq(seq_dna[:-offset]).translate())
                         else:
@@ -329,15 +352,14 @@ def get_fastas(df, fasta_dict, out_dir, species, text_width, output_type):
         # writting the changed genes
         df_changed = group_df[group_df['M_pos_diff'] != 0]
         # forward
-        df_changed.loc[df_changed['direction2'] == "+", 'start'] = df_changed.loc[df_changed['direction2'] == "+", 'true_M_pos']
+        df_changed.loc[df_changed['direction'] == "+", 'start'] = df_changed.loc[df_changed['direction'] == "+", 'true_M_pos']
         # backward
-        df_changed.loc[df_changed['direction2'] == "-", 'end'] = df_changed.loc[df_changed['direction2'] == "-", 'true_M_pos']
+        df_changed.loc[df_changed['direction'] == "-", 'end'] = df_changed.loc[df_changed['direction'] == "-", 'true_M_pos']
         writting_fasta(scaffold, df_changed, ch_dna_path, ch_prot_path)
 
         # writting the error genes
         df_error = group_df[group_df['no_M']]
         writting_fasta(scaffold, df_error, err_dna_path, err_prot_path)
-
 
 
 ### Multiprocessing
@@ -348,7 +370,7 @@ def process_one_scaffold(args):
     fasta_seq = fasta_dict[scaffold]  # if scaffold is a tuple, e.g. ('scaffold_1',)
     starts = group_df['start'].astype(int).tolist()
     ends = group_df['end'].astype(int).tolist()
-    directions = group_df['direction2'].tolist()
+    directions = group_df['direction'].tolist()
 
     true_M_positions = [
         re_verifyM_v2(fasta_seq, s, e, d)
@@ -363,13 +385,13 @@ def process_one_scaffold(args):
     mask = ~group_result['no_M']
 
     # + direction
-    mask2 = group_result['direction2'] == '+'
+    mask2 = group_result['direction'] == '+'
     group_result.loc[mask & mask2, 'M_pos_diff'] = (
         group_result.loc[mask & mask2, 'start'] - group_result.loc[mask & mask2, 'true_M_pos']
     ).abs()
 
     # - direction
-    mask3 = group_result['direction2'] == '-'
+    mask3 = group_result['direction'] == '-'
     group_result.loc[mask & mask3, 'M_pos_diff'] = (
         group_result.loc[mask & mask3, 'end'] - group_result.loc[mask & mask3, 'true_M_pos']
     ).abs()
@@ -387,8 +409,8 @@ def findM_parallel(df, fasta_dict):
     return pd.concat(results, ignore_index=True)
 
 
-
-def writting_fasta(scaffold, df_combined, df_gff, fasta_dict, path_dna, path_prot, output_type, text_width):
+# For GFF version 1
+def writting_fasta(scaffold, df_combined, df_gff, fasta_dict, path_dna, path_prot, output_type, text_width, groupby_col):
     prev_name = ''
     count = 1
     with open(path_dna, 'a') as f_dna, open(path_prot, 'a') as f_prot:
@@ -400,11 +422,10 @@ def writting_fasta(scaffold, df_combined, df_gff, fasta_dict, path_dna, path_pro
             prev_name = row['name']
             # print(row)
             # get the full CDS data of that model name
-            df_cds = df_gff.loc[(df_gff['name'] == row['name']) & (df_gff['type'] == 'CDS')]
-            df_cds = df_cds.sort_values(by='start', ascending=True)
-
+            df_cds = df_gff.loc[(df_gff[groupby_col] == row[groupby_col]) & (df_gff['feature_type'] == 'CDS')]
+            df_cds = df_cds.sort_values(by=['direction', 'scaffold', 'start'], ascending=[True, True, True])
             # forward
-            if row['direction2'] == "+":
+            if row['direction'] == "+":
                 # the first CDS that we modified in df_combined
                 seq_dna = fasta_dict[scaffold][int(row['start']):int(row['end'])]
                 # get the rest part from df_gff
@@ -435,7 +456,7 @@ def writting_fasta(scaffold, df_combined, df_gff, fasta_dict, path_dna, path_pro
                 # is_empty_prot = False
                 offset = len(seq_dna)%3
                 # forward
-                if row['direction2'] == "+":
+                if row['direction'] == "+":
                     if offset > 0:
                         seq_prot = str(Seq(seq_dna[:-offset]).translate())
                     else:
@@ -458,6 +479,49 @@ def writting_fasta(scaffold, df_combined, df_gff, fasta_dict, path_dna, path_pro
                         f_dna.write(w + "\n")
     f_dna.close()
     f_prot.close()
+    
+    
+# For GFF version 3
+def writting_fasta_v3(scaffold, df_combined, df_gff, fasta_dict, path_dna, path_prot, output_type, text_width, groupby_col):
+    with open(path_prot, 'a') as f_prot:
+        for idx1, row in df_combined.iterrows():
+            parent_data = df_gff[df_gff['ID'] == row['Parent']]
+            if "name" in parent_data.columns:
+                f_prot.write(f">{parent_data['name'].iloc[0]}\n")
+            else:
+                f_prot.write(f">{parent_data['infos'].iloc[0]}\n")
+            # print(row)
+            # get the full CDS data of that model name
+            df_cds = df_gff.loc[(df_gff[groupby_col] == row[groupby_col]) & (df_gff['feature_type'] == 'CDS')]
+            df_cds = df_cds.sort_values(by=['direction', 'scaffold', 'start'], ascending=[True, True, True])
+            phase = int(row['phase'])
+            seq_prot = ""
+            # forward
+            if row['direction'] == "+":
+                # the first CDS that we modified in df_combined
+                seq_dna = fasta_dict[scaffold][int(row['start']):int(row['end'])]
+                # get the rest part from df_gff
+                for idx2, row2 in df_cds.iloc[1:].iterrows():
+                    seq_dna += fasta_dict[scaffold][row2['start']:row2['end']]
+                seq_prot = str(Seq(seq_dna[phase:]).translate())
+            
+            # backward
+            else:
+                seq_dna = ''
+                # get the first part of sequence
+                for idx2, row2 in df_cds.iloc[:-1].iterrows():
+                    seq_dna += fasta_dict[scaffold][row2['start']:row2['end']]
+                # the last part that we modified
+                seq_dna += fasta_dict[scaffold][int(row['start']):int(row['end'])]
+                if phase > 0:
+                    seq_prot = str(Seq(seq_dna[:-phase]).reverse_complement().translate())
+                else:
+                    seq_prot = str(Seq(seq_dna).reverse_complement().translate())
+                
+            wraps_prot = textwrap.wrap(seq_prot, width=text_width)
+            for w in wraps_prot:
+                f_prot.write(w + "\n")
+    f_prot.close()
 
 
 def process_scaffold_v2(args):
@@ -467,7 +531,9 @@ def process_scaffold_v2(args):
     fasta_dict, \
     process_dir, \
     outtype, \
-    textwidth = args
+    textwidth, \
+    groupby_col, \
+    writting_fasta = args
 
     scaffold_id = scaffold
     # temporal fasta files for each scaffold
@@ -482,17 +548,17 @@ def process_scaffold_v2(args):
 
     df_unchanged = group_df[(group_df['M_pos_diff'] == 0) & (~group_df['no_M'])]
     if not df_unchanged.empty:
-        writting_fasta(scaffold_id, df_unchanged, df_gff, fasta_dict, unch_dna_path, unch_prot_path, outtype, textwidth)
+        writting_fasta(scaffold_id, df_unchanged, df_gff, fasta_dict, unch_dna_path, unch_prot_path, outtype, textwidth, groupby_col)
 
     df_changed = group_df[group_df['M_pos_diff'] != 0].copy()
     if not df_changed.empty:
-        df_changed.loc[df_changed['direction2'] == "+", 'start'] = df_changed.loc[df_changed['direction2'] == "+", 'true_M_pos']
-        df_changed.loc[df_changed['direction2'] == "-", 'end']   = df_changed.loc[df_changed['direction2'] == "-", 'true_M_pos']
-        writting_fasta(scaffold_id, df_changed, df_gff, fasta_dict, ch_dna_path, ch_prot_path, outtype, textwidth)
+        df_changed.loc[df_changed['direction'] == "+", 'start'] = df_changed.loc[df_changed['direction'] == "+", 'true_M_pos']
+        df_changed.loc[df_changed['direction'] == "-", 'end']   = df_changed.loc[df_changed['direction'] == "-", 'true_M_pos']
+        writting_fasta(scaffold_id, df_changed, df_gff, fasta_dict, ch_dna_path, ch_prot_path, outtype, textwidth, groupby_col)
 
     df_error = group_df[group_df['no_M']]
     if not df_error.empty:
-        writting_fasta(scaffold_id, df_error, df_gff, fasta_dict, err_dna_path, err_prot_path, outtype, textwidth)
+        writting_fasta(scaffold_id, df_error, df_gff, fasta_dict, err_dna_path, err_prot_path, outtype, textwidth, groupby_col)
 
 
 def merge_fasta(output_file, pattern):
@@ -502,35 +568,67 @@ def merge_fasta(output_file, pattern):
                 shutil.copyfileobj(infile, outfile, length=1024 * 1024 * 10)  # 10MB buffer
 
 
-def writting_parallel(species, out_dir, processed_dir, df_combined, df_gff, fasta_dict, outtype, text_width):
+def writting_parallel(ver, species, out_dir, processed_dir, df_combined, df_gff, fasta_dict, outtype, text_width, groupby_col):
     # df_combined = pd.read_csv("df_combined.csv") 
     # df_gff = pd.read_csv("df_gff.csv")    
 
     # with open("fasta_dict.json", "r") as f:
     #     fasta_dict = json.load(f)
+    # gff ver1
+    if ver == "1":
+        print("GFF Version 1 writting fasta processing =================")
+        args = [(scaffold,\
+                group.copy(),\
+                df_gff, \
+                fasta_dict, \
+                processed_dir,\
+                outtype, \
+                text_width, \
+                groupby_col, \
+                text_width, writting_fasta) for scaffold, group in df_combined.groupby('scaffold')]
 
-    args = [(scaffold,\
-            group.copy(),\
-            df_gff, \
-            fasta_dict, \
-            processed_dir,\
-            outtype, \
-            text_width) for scaffold, group in df_combined.groupby('scaffold')]
+        with mp.Pool(processes=mp.cpu_count()) as pool:
+            pool.map(process_scaffold_v2, args)
 
-    with mp.Pool(processes=mp.cpu_count()) as pool:
-        pool.map(process_scaffold_v2, args)
+        unch_dna_path = os.path.join(out_dir, f'{species}_Unchanged_dna.fasta')
+        ch_dna_path   = os.path.join(out_dir, f'{species}_Changed_dna.fasta')
+        err_dna_path  = os.path.join(out_dir, f'{species}_Error_dna.fasta')
+        
+        unch_prot_path = os.path.join(out_dir, f'{species}_Unchanged_prot.fasta')
+        ch_prot_path   = os.path.join(out_dir, f'{species}_Changed_prot.fasta')
+        err_prot_path  = os.path.join(out_dir, f'{species}_Error_prot.fasta')
 
-    unch_dna_path = os.path.join(out_dir, f'{species}_Unchanged_dna.fasta')
-    ch_dna_path   = os.path.join(out_dir, f'{species}_Changed_dna.fasta')
-    err_dna_path  = os.path.join(out_dir, f'{species}_Error_dna.fasta')
-    unch_prot_path = os.path.join(out_dir, f'{species}_Unchanged_prot.fasta')
-    ch_prot_path   = os.path.join(out_dir, f'{species}_Changed_prot.fasta')
-    err_prot_path  = os.path.join(out_dir, f'{species}_Error_prot.fasta')
+        merge_fasta(unch_dna_path, os.path.join(processed_dir, "*_unchanged_dna.fasta"))
+        merge_fasta(ch_dna_path, os.path.join(processed_dir,"*_changed_dna.fasta"))
+        merge_fasta(err_dna_path, os.path.join(processed_dir,"*_error_dna.fasta"))
 
-    merge_fasta(unch_dna_path, os.path.join(processed_dir, "*_unchanged_dna.fasta"))
-    merge_fasta(ch_dna_path, os.path.join(processed_dir,"*_changed_dna.fasta"))
-    merge_fasta(err_dna_path, os.path.join(processed_dir,"*_error_dna.fasta"))
+        merge_fasta(unch_prot_path, os.path.join(processed_dir,"*_unchanged_prot.fasta"))
+        merge_fasta(ch_prot_path, os.path.join(processed_dir,"*_changed_prot.fasta"))
+        merge_fasta(err_prot_path, os.path.join(processed_dir,"*_error_prot.fasta"))
+    # gff ver 3
+    else:
+        print("GFF Version 3 writting fasta processing =================")
+        args = [(scaffold,\
+                group.copy(),\
+                df_gff, \
+                fasta_dict, \
+                processed_dir,\
+                outtype, \
+                text_width, \
+                groupby_col, \
+                writting_fasta_v3) for scaffold, group in df_combined.groupby('scaffold')]
 
-    merge_fasta(unch_prot_path, os.path.join(processed_dir,"*_unchanged_prot.fasta"))
-    merge_fasta(ch_prot_path, os.path.join(processed_dir,"*_changed_prot.fasta"))
-    merge_fasta(err_prot_path, os.path.join(processed_dir,"*_error_prot.fasta"))
+        with mp.Pool(processes=mp.cpu_count()) as pool:
+            pool.map(process_scaffold_v2, args)
+            
+        unch_prot_path = os.path.join(out_dir, f'{species}_Unchanged_prot.fasta')
+        ch_prot_path   = os.path.join(out_dir, f'{species}_Changed_prot.fasta')
+        err_prot_path  = os.path.join(out_dir, f'{species}_Error_prot.fasta')
+        final_prot_path = os.path.join(out_dir, f'{species}_Final_prot.fasta')
+
+        merge_fasta(unch_prot_path, os.path.join(processed_dir,"*_unchanged_prot.fasta"))
+        merge_fasta(ch_prot_path, os.path.join(processed_dir,"*_changed_prot.fasta"))
+        merge_fasta(err_prot_path, os.path.join(processed_dir,"*_error_prot.fasta"))
+        
+        # Combined all fasta files into the final one
+        merge_fasta(final_prot_path, os.path.join(processed_dir,"*_prot.fasta"))
