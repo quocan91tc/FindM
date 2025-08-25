@@ -8,7 +8,7 @@
 
 
 ### Overview<a name="motivation"></a>
-This simple Python script here help to correct the M position of CDS in the translated protein sequence in both 2 directions (5-3 and 3-5) from the JGI Database. Then, the tool will give you a csv file containing the M position information of the first CDS of each gene and 3 fasta files which are the defective proteins (error), the codon start position corrected ones (changed) and the unchanged ones. Furthermore, this tool lets you choose free the format output fasta files that you want wether DNA or Amino Acide. 
+This simple Python script here help to extend the M position of CDS in the translated protein sequence in both 2 directions (5-3 and 3-5) from the JGI Database. Then, the tool will give you a csv file containing the M position information of the first CDS of each gene and 3 fasta files which are the defective proteins (error), the codon start position corrected ones (changed) and the unchanged ones. Furthermore, this tool lets you choose free the format output fasta files that you want wether DNA or Amino Acide. 
 In fact, I developped this tool for my project of studying the targetting plastidic proteins of Haptophyta. Since many genes in the database were annotated errously bu computer, the prediction of Signal Peptide is consequenctly affected. Thus, I have to clean up the data for better prediction performance then here we are. I've tested this script on my Apple Macbook Pro M1 Pro 10-core CPU with Emihu1 dataset from JGI which is combined ~228k genes and it takes about more-or-less 2 hours to finish the task.
 
 ### Requirements <a name="req"></a>
@@ -57,9 +57,9 @@ In fact, I developped this tool for my project of studying the targetting plasti
 
 4. The structure of the command:
 ```
-    python findM.py  -s 'species name' -g 'path/to/file.gff' -f 'path/to/file.fasta' -t 'fasta output type'
+    python findM.py  -s 'species name' -g 'path/to/file.gff' -v 1 -f 'path/to/file.fasta' -o (optional) 'path/to/save/output' 
 ```
-- The option `-t` that let you choose the format of fasta file that you want to get: DNA sequences `'dna'` or Acide Amine `'protein'` sequences or Both `'both'`. Kindly replace those word right after the -t option. 
-
+- The command above used for GFF version 1 file, to use with GFF version 3 input file, simply change `-v 1` to `-v 3`.
+- The parameter `-o` is optional, without that, the tool will save its result directly to the current directory by default.
 ### Licensing, Authors, Acknowledgements<a name="licensing"></a>
 This tool was created by Tran Quoc An Truong ([LinkedIn](https://www.linkedin.com/in/tran-quoc-an-truong/)).
